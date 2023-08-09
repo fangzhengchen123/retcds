@@ -60,14 +60,14 @@ pub async fn check_post_response(resp: &mut Response<Body>, req:Request<Body>, t
             let body_str = String::from_utf8_lossy(&resp.data().await.unwrap().unwrap().to_vec()).trim_end().to_string();
             match body_str.as_str() {
                 err if err.contains(&CustomError::IncompatibleVersion.to_string()) =>{
-
                     error!(default_logger(),"request sent was ignored by peer remote-peer-id={}",to.to_string());
                     Err(std::io::Error::new(ErrorKind::Other, err.to_string()))
                 }
+
                 err if err.contains(&CustomError::ClusterIDMismatch.to_string()) =>{
                     error!(default_logger(),"request sent was ignored due to cluster ID mismatch remote-peer-id =>{} remote-peer-cluster-id=>{} local-member-cluster-id=>{}",to.to_string()
-                        ,resp.headers().get("X-Etcd-Cluster-ID").unwrap().to_str().unwrap()
-                        ,req.headers().get("X-Etcd-Cluster-ID").unwrap().to_str().unwrap());
+                        ,resp.headers().get("X-Etcd-Cluster-ID").expect("error get X-Etcd-Cluster-ID(response))").to_str().unwrap()
+                        ,req.headers().get("X-Etcd-Cluster-ID").expect("error get X-Etcd-Cluster-ID(request)").to_str().unwrap());
                     Err(std::io::Error::new(ErrorKind::Other, err.to_string()))
                 }
                 &_ => {

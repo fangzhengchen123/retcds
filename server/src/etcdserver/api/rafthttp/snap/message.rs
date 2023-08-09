@@ -1,11 +1,9 @@
-use std::io::Read;
-use std::rc;
 use futures::SinkExt;
 use raft::eraftpb::Message;
 use crate::etcdserver::api::rafthttp::error::Error;
-use crate::etcdserver::api::rafthttp::util::read_closer::{ExactReaderCloser};
 use crate::etcdserver::async_ch::Channel;
 
+#[derive(Clone)]
 pub struct SnapMessage{
     msg: Message,
     // read_closer: ExactReaderCloser,
@@ -14,11 +12,11 @@ pub struct SnapMessage{
 }
 
 impl SnapMessage{
-    pub fn new_snap_message(msg: Message, total_size: i64, close_c : Channel<bool>) -> Self {
+    pub fn new_snap_message(msg: Message, close_c : Channel<bool>) -> Self {
         SnapMessage{
-            msg: msg,
+            msg: msg.clone(),
             // read_closer: ExactReaderCloser::new(read_closer,total_size ),
-            total_size: total_size,
+            total_size: protobuf::Message::write_to_bytes(&msg.clone()).unwrap().len() as i64,
             close_c : close_c,
         }
     }
@@ -38,5 +36,9 @@ impl SnapMessage{
 
     pub fn get_msg(&self) -> Message {
         self.msg.clone()
+    }
+
+    pub fn get_total_size(&self) -> i64 {
+        self.total_size.clone()
     }
 }

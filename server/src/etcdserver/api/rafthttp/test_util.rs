@@ -123,7 +123,6 @@ pub async fn handler_err(req: Request<Body>) -> Result<Response<Body>, Infallibl
     let path = req.uri().path();
     match path {
         "/raft" => {
-            // 处理 "/about" 路径
             let response = Response::builder()
                 .status(403)
                 .body(Body::from("error"))
@@ -133,8 +132,11 @@ pub async fn handler_err(req: Request<Body>) -> Result<Response<Body>, Infallibl
         "/raft/snapshot" =>{
             info!(default_logger(),"snapshot received");
             let response = Response::builder()
-                .status(403)
-                .body(Body::from("error"))
+                .status(412)
+                .header("X-Etcd-Cluster-ID",1)
+                // .header("X-Etcd-Cluster-ID",1)
+                .body(Body::from("Cluster ID mismatch"))
+
                 .unwrap();
             Ok(response)
         }
@@ -150,7 +152,6 @@ pub async fn handler_succ(req: Request<Body>) -> Result<Response<Body>, Infallib
     let path = req.uri().path();
     match path {
         "/raft" => {
-            // 处理 "/about" 路径
             let response = Response::builder()
                 .status(204)
                 .body(Body::from("error"))
