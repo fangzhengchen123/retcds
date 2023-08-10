@@ -58,5 +58,19 @@ impl<T> Channel<T> {
     pub(crate) fn take_tx(&mut self) -> Option<Sender<T>> {
         self.tx.take()
     }
+
+    pub fn is_empty(&self) -> bool {
+        if let Some(rx) = &self.rx {
+            return rx.is_empty();
+        }
+        true
+    }
+
+    pub fn is_full(&self) -> bool {
+        if let Some(tx) = &self.tx {
+            return tx.is_full();
+        }
+        true
+    }
 }
 

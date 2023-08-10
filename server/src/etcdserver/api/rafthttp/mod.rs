@@ -14,6 +14,7 @@ pub mod http;
 pub mod peer;
 mod snapshot_sender;
 pub mod test_util;
+pub mod stream;
 
 #[allow(dead_code)]
 pub fn default_logger() -> slog::Logger {

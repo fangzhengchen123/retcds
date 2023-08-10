@@ -18,6 +18,10 @@ impl ID {
     pub fn to_string(&self) -> String {
         self.0.to_string()
     }
+
+    pub fn get(&self) -> u64 {
+        self.0
+    }
 }
 
 impl FromStr for ID {
