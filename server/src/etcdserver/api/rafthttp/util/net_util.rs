@@ -28,7 +28,6 @@ impl Error for CustomError {}
 impl fmt::Display for CustomError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-
             CustomError::IncompatibleVersion => write!(f, "incompatible version"),
             CustomError::ClusterIDMismatch => write!(f, "Cluster ID mismatch"),
             CustomError::MemberRemoved => write!(f, "the member has been permanently removed from the cluster"),

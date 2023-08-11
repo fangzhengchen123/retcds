@@ -138,6 +138,7 @@ mod tests{
     use std::sync::{Arc, Mutex};
     use openssl::x509::extension::ExtendedKeyUsage;
     use slog::info;
+    use tokio::net::TcpStream;
     use tracing::Instrument;
     use url::Url;
     use client::pkg::transport::listener::{new_tls_acceptor, self_cert, TLSInfo};
@@ -181,6 +182,7 @@ mod tests{
         let picker = urlPicker::new_url_picker(urls);
         let tr = new_tr("https://localhost:2380".to_string(),info.clone());
         server_succ(info.clone()).await;
+        let st = TcpStream::connect("127.0.0.1:2380").await.expect("tcpstream error");
         let mut snapsend = new_snapshot_sender(tr, picker, Arc::new(Mutex::new(PeerStatus::new(ID::new(0), ID::new(1)))), ID::new(1));
         info!(default_logger(),"start send");
         snapsend.send(sm).await;

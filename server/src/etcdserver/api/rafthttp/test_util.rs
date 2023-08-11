@@ -9,6 +9,7 @@ use hyper::server::conn::AddrIncoming;
 use hyper::service::{make_service_fn, service_fn};
 use hyper_rustls::TlsAcceptor;
 use slog::info;
+use tokio::net::TcpListener;
 use tokio::select;
 use client::pkg::transport::listener::{new_tls_acceptor, TLSInfo};
 use client::pkg::transport::transport::transport;
@@ -93,6 +94,7 @@ pub(crate) async fn server_succ(tlsinfo: TLSInfo) {
             .serve(make_svc);
         server.await.unwrap();
     });
+    let listener = TcpListener::bind("127.0.0.1:2380").await.unwrap();
 
     info!(default_logger(),"server started");
 }
@@ -105,6 +107,7 @@ pub async fn server_err(tlsinfo: TLSInfo) {
         .with_tls_config((*tlsinfo.clone().server_config()).clone())
         .with_all_versions_alpn()
         .with_incoming(incoming);
+
     let make_svc = make_service_fn(|_| {
         async {
             Ok::<_, Infallible>(service_fn(handler_err))
@@ -116,6 +119,7 @@ pub async fn server_err(tlsinfo: TLSInfo) {
             .http2_only(true)
             .serve(make_svc);
         server.await.unwrap();
+
     });
 }
 
@@ -136,11 +140,12 @@ pub async fn handler_err(req: Request<Body>) -> Result<Response<Body>, Infallibl
                 .header("X-Etcd-Cluster-ID",1)
                 // .header("X-Etcd-Cluster-ID",1)
                 .body(Body::from("Cluster ID mismatch"))
-
                 .unwrap();
+
             Ok(response)
         }
         _ => {
+
             // 处理其他路径
             let response = Response::new(Body::from("Not found"));
             Ok(response)
