@@ -9,7 +9,6 @@ use hyper::http::HeaderValue;
 use hyper::http::request::Builder;
 use semver::{BuildMetadata, Prerelease, Version};
 use slog::{error, info, warn};
-// use openssl::version::version;
 use url::Url;
 use crate::etcdserver::api::rafthttp::types::id::ID;
 use crate::etcdserver::api::rafthttp::types::urls::URLs;
@@ -112,9 +111,11 @@ pub fn compare_major_minor_version(a: &Version, b: &Version) -> i32 {
 }
 
 pub fn server_version(headers: &hyper::HeaderMap<HeaderValue>) -> Result<Version, semver::Error> {
-    if let Some(ver_str) = headers.get("X-Server-Version").and_then(|value| value.to_str().ok()) {
-        Version::parse(ver_str)
-    } else {
+    let version= headers.get("X-Server-Version");
+    if version.is_some(){
+        Version::parse(version.unwrap().to_str().unwrap())
+    }
+    else {
         Version::parse("2.0.0")
     }
 }

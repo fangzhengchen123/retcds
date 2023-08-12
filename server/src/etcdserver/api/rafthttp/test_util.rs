@@ -8,17 +8,24 @@ use hyper::{Body, body, Request, Response, Server};
 use hyper::server::conn::AddrIncoming;
 use hyper::service::{make_service_fn, service_fn};
 use hyper_rustls::TlsAcceptor;
+use openssl::version::version;
 use slog::info;
+use slog::warn;
 use tokio::net::TcpListener;
 use tokio::select;
+// use tracing::warn;
 use client::pkg::transport::listener::{new_tls_acceptor, TLSInfo};
 use client::pkg::transport::transport::transport;
-use raft::eraftpb::Message;
+use raft::eraftpb::{Message, MessageType};
 use raft::SnapshotStatus;
 use crate::etcdserver::api::rafthttp::transport::{Raft, Transport};
 use crate::etcdserver::api::rafthttp::util::util::write_and_sync_file;
 use crate::etcdserver::async_ch::Channel;
 use client::pkg::tlsutil::default_logger;
+use crate::etcdserver::api::rafthttp::http::{errClusterIDMismatch, errIncompatibleVersion};
+use crate::etcdserver::api::rafthttp::util::version;
+
+
 
 pub struct fakeRaft {
     pub recvc: Channel<Message>,
@@ -61,7 +68,7 @@ pub fn new_tr(url:String,info:TLSInfo) ->Transport{
         None,
         None,
         None,
-        None,
+        Option::from(transport(info.clone())),
         Option::from(transport(info.clone())),
         Option::from(Channel::new(1)),
         Arc::new(Box::new(fakeRaft {
@@ -94,7 +101,7 @@ pub(crate) async fn server_succ(tlsinfo: TLSInfo) {
             .serve(make_svc);
         server.await.unwrap();
     });
-    let listener = TcpListener::bind("127.0.0.1:2380").await.unwrap();
+    // let listener = TcpListener::bind("127.0.0.1:2380").await.unwrap();
 
     info!(default_logger(),"server started");
 }
@@ -124,6 +131,12 @@ pub async fn server_err(tlsinfo: TLSInfo) {
 }
 
 pub async fn handler_err(req: Request<Body>) -> Result<Response<Body>, Infallible> {
+
+    let response_err = Response::builder()
+        .status(412)
+        .header("X-Server-Version",version::Version)
+        .body(Body::from(errClusterIDMismatch.to_string()))
+        .unwrap();
     let path = req.uri().path();
     match path {
         "/raft" => {
@@ -141,11 +154,12 @@ pub async fn handler_err(req: Request<Body>) -> Result<Response<Body>, Infallibl
                 // .header("X-Etcd-Cluster-ID",1)
                 .body(Body::from("Cluster ID mismatch"))
                 .unwrap();
-
             Ok(response)
         }
+        "/raft/stream/message/1" =>{
+            Ok(response_err)
+        }
         _ => {
-
             // 处理其他路径
             let response = Response::new(Body::from("Not found"));
             Ok(response)
@@ -154,6 +168,19 @@ pub async fn handler_err(req: Request<Body>) -> Result<Response<Body>, Infallibl
 }
 
 pub async fn handler_succ(req: Request<Body>) -> Result<Response<Body>, Infallible> {
+
+
+    let response_succ = Response::builder()
+        .status(200)
+        .header("X-Server-Version",version::Version)
+        .body(Body::from(protobuf::Message::write_to_bytes(&msg).unwrap()))
+        // .body(Body::from(errClusterIDMismatch.to_string()))
+        .unwrap();
+
+    let mut msg =  Message::default();
+    msg.msg_type = MessageType::MsgHeartbeat;
+    msg.from = 0;
+    msg.to = 0;
     let path = req.uri().path();
     match path {
         "/raft" => {
@@ -168,14 +195,18 @@ pub async fn handler_succ(req: Request<Body>) -> Result<Response<Body>, Infallib
             let mut dir = PathBuf::new();
             dir.push(std::env::temp_dir());
             dir.push("test-snap-send");
-            fs::remove_dir_all(&dir).unwrap();
             fs::create_dir(&dir).unwrap();
             write_and_sync_file(&dir.join("snap.db"), &req_body.to_vec(), 0x66).await.unwrap();
             let response = Response::builder()
                 .status(204)
                 .body(Body::from("error"))
                 .unwrap();
+            fs::remove_dir_all(&dir).unwrap();
             Ok(response)
+        }
+        "/raft/stream/message/1" => {
+            // warn!(default_logger(),"stream message received");
+            Ok(response_succ)
         }
         _ => {
             // 处理其他路径
